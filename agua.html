@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Factura de Agua</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+    }
+    label, input {
+      display: block;
+      margin: 10px 0;
+    }
+    button {
+      margin-top: 10px;
+      margin-right: 10px;
+    }
+    .result {
+      color: #000000;
+      margin-top: 5px;
+      padding: 5px;
+      border-radius: 5px;
+    }
+
+    d:nth-child(even),td:nth-child(even) {
+    background-color: #185f9a;
+    color: white;
+    }
+  </style>
+</head>
+<body onload="cargarDatos()">
+  <h1>Factura de Agua</h1>
+    <label for="miSelect">Nombre del cliente:</label>
+    <select id="miSelect" onchange="searchClient(this.value)">
+      <option value="">Cargando opciones...</option>
+    </select>  
+
+  <label>Tarifa m3:
+    <input type="number" id="tarifa" value="30"/>
+  </label>
+
+  <label>Fecha (día/mes/año):
+    <input type="date" id="fecha" value=""/>
+  </label>
+
+  <label>Lectura anterior:
+    <input type="number" id="lecturaAnterior" />
+  </label>
+
+  <label>Lectura actual:
+    <input type="number" id="lecturaActual" />
+  </label>
+
+  <label>Saldo anterior:
+    <input type="number" id="saldoAnterior" value="0"/>
+  </label>
+
+  <button onclick="calcular()">Calcular y mostrar factura</button>
+  <button onclick="generarImagen()">Generar Imagen PNG</button>
+  <button onclick="cargarDatos()">cargar datos</button>
+  
+
+  <div class="result" id="resultado"></div>
+
+  <script>
+    let facturaGlobal = {};
+    const { createClient } = supabase
+    const supabaseUrl = 'https://xrckiknyndtzrbjymlhx.supabase.co';
+    const supabaseKey = 'sb_publishable_YLTAQ36JVj8m7O2noMcdJg_oADlsbG7';
+    const _supabase = createClient(supabaseUrl, supabaseKey);
+
+    async function searchClient(id_cliente){
+        // let { data: facturas, error } = await _supabase
+        // .from('facturas')
+        // .select('*')
+        // .eq('cliente_id', id_cliente)
+        // .order('fecha', { ascending: false })
+        // .limit(1)
+        // .single(); 
+
+        // console.log(facturas)
+    }
+
+    async function cargarDatos() {
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('fecha').value = hoy;
+
+        let { data: clientes, error } = await _supabase
+        .from('clientes')
+        .select('*')
+
+        if (error) {
+            console.error(error);
+            document.getElementById('resultado').textContent = 'Error: ' + error.message;
+        } else {
+            const select = document.getElementById("miSelect");
+            select.innerHTML = '';
+            clientes.forEach(item => {
+            const option = document.createElement("option");
+            option.value = item.id;
+            option.textContent = item.nombre;
+            select.appendChild(option);
+            });
+        }
+    }
+
+
+    function calcular() {
+      const select = document.getElementById("miSelect");
+      const idCliente = select.value;
+      const cliente = select.options[select.selectedIndex].text;
+      const fecha = new Date(document.getElementById("fecha").value);
+      const lecturaAnterior = parseFloat(document.getElementById("lecturaAnterior").value);
+      const lecturaActual = parseFloat(document.getElementById("lecturaActual").value);
+      const saldoAnterior = parseFloat(document.getElementById("saldoAnterior").value);
+      const tarifa = parseFloat(document.getElementById("tarifa").value);
+
+      const consumo = lecturaActual - lecturaAnterior;
+      const totalPagar = consumo * tarifa + saldoAnterior;
+
+      const fechaFormateada = fecha.toLocaleDateString("es-ES");
+      const ultimoDelMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).toLocaleDateString("es-ES");
+
+      facturaGlobal = {
+        idCliente,
+        cliente,
+        fecha: fechaFormateada,
+        lecturaAnterior,
+        lecturaActual,
+        consumo,
+        saldoAnterior,
+        totalPagar,
+        fechaMaxPago: ultimoDelMes
+      };
+
+      document.getElementById("resultado").innerHTML = `
+        <table style="width:60%">
+            <tr>
+                <td>Nombre:</td>
+                <td>${cliente}</td>
+            </tr>
+            <tr>
+                <td>Fecha:</td>
+                <td>${fechaFormateada}</td>
+            </tr>
+            <tr>
+                <td>Lectura anterior:</td>
+                <td>${lecturaAnterior}</td>
+            </tr>
+            <tr>
+                <td>Lectura actual:</td>
+                <td>${lecturaActual}</td>
+            </tr>
+            <tr>
+                <td>Consumo de agua (m3):</td>
+                <td>${consumo}</td>
+            </tr>
+            <tr>
+                <td>Saldo anterior:</td>
+                <td>${saldoAnterior.toFixed(2)}</td>
+            </tr>
+            <tr>
+                <td>Total a pagar:</td>
+                <td>${totalPagar.toFixed(2)}</td>
+            </tr>
+            <tr>
+                <td>Fecha máxima de pago:</td>
+                <td>${ultimoDelMes}</td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    Los pagos unicamente a tráves de depósito/tranferencia a cuenta.
+                    <br> <div style="color: #135f1e;">Comprobante de depósito respalda el pago</div>
+                    <br> <div style="font-weight: bold;">#cta BAC: 746288631</div>
+                </td>
+            </tr>
+        </table>
+      `;
+
+      guardarNuevoRegistro(facturaGlobal)
+    }
+
+    async function guardarNuevoRegistro(facturaGlobal){
+        let fecha = new Date(document.getElementById("fecha").value)
+        let fechaISO = fecha.toISOString().split('T')[0];
+        let fechaLimite = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).toISOString().split('T')[0];
+        const { data, error } = await _supabase
+        .from('facturas')
+        .insert([
+            { 
+                cliente_id: facturaGlobal.idCliente,
+                fecha: fechaISO,
+                lectura_anterior: facturaGlobal.lecturaAnterior,
+                lectura_actual: facturaGlobal.lecturaActual, 
+                saldo_anterior: facturaGlobal.saldoAnterior,
+                total_pagar: facturaGlobal.totalPagar, 
+                fecha_limite_pago: fechaLimite
+            },
+        ])
+        .select()
+
+        if (error) {
+            console.error(error);
+            document.getElementById('resultado').textContent = 'Error: ' + error.message;
+        } else {
+            cargarDatos()
+        }
+    }
+    function generarImagen() {
+      const resultado = document.getElementById("resultado");
+      if (!resultado.innerHTML.trim()) {
+        alert("Por favor primero genera la factura.");
+        return;
+      }
+
+      html2canvas(resultado).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `factura_${facturaGlobal.cliente.replace(/\s/g, "_")}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+
+    }
+  </script>
+</body>
+</html>
