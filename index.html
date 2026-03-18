@@ -4,98 +4,738 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Factura de Agua</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Materialize CSS -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="css/uikit.min.css" />
-  <script src="js/uikit.min.js"></script>
-  <script src="js/uikit-icons.min.js"></script>
+
   <style>
+    :root {
+      --agua: #1565C0;
+      --agua-light: #42A5F5;
+      --agua-dark: #0D47A1;
+      --accent: #00BCD4;
+      --surface: #F0F7FF;
+      --card-bg: #ffffff;
+      --text-main: #1a2a3a;
+      --text-muted: #607d8b;
+      --border: #B3D4F5;
+      --danger: #e53935;
+      --success: #43a047;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: auto;
-      padding: 20px;
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(135deg, #e3f0ff 0%, #f0f7ff 60%, #e8f5e9 100%);
+      min-height: 100vh;
+      color: var(--text-main);
     }
-    label, input {
+
+    /* Header */
+    .app-header {
+      background: linear-gradient(120deg, var(--agua-dark) 0%, var(--agua) 60%, var(--accent) 100%);
+      padding: 28px 0 18px 0;
+      box-shadow: 0 4px 24px rgba(21,101,192,0.18);
+      margin-bottom: 32px;
+    }
+    .app-header h4 {
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #fff;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .app-header .header-sub {
+      color: rgba(255,255,255,0.75);
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+    .drop-icon {
+      font-size: 2rem;
+      color: var(--accent);
+    }
+
+    /* Cards */
+    .card-modern {
+      border-radius: 18px;
+      box-shadow: 0 4px 24px rgba(21,101,192,0.10);
+      border: 1.5px solid var(--border);
+      background: var(--card-bg);
+      margin-bottom: 28px;
+      overflow: hidden;
+    }
+    .card-modern .card-title-bar {
+      background: linear-gradient(90deg, var(--agua) 0%, var(--accent) 100%);
+      padding: 14px 22px;
+      color: #fff;
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 1.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-modern .card-body {
+      padding: 22px 26px 18px 26px;
+    }
+
+    /* Form inputs override */
+    .input-field label {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .input-field input:focus + label,
+    .input-field input.valid + label {
+      color: var(--agua) !important;
+    }
+    .input-field input:focus {
+      border-bottom-color: var(--agua) !important;
+      box-shadow: 0 1px 0 0 var(--agua) !important;
+    }
+    select:focus {
+      outline: none;
+    }
+
+    /* Buttons */
+    .btn-agua {
+      background: linear-gradient(90deg, var(--agua) 0%, var(--accent) 100%);
+      border-radius: 10px;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      letter-spacing: 1px;
+      box-shadow: 0 2px 12px rgba(21,101,192,0.18);
+      transition: filter 0.18s, transform 0.12s;
+    }
+    .btn-agua:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+      background: linear-gradient(90deg, var(--agua) 0%, var(--accent) 100%);
+    }
+    .btn-outline-agua {
+      background: transparent;
+      border: 2px solid var(--agua);
+      color: var(--agua) !important;
+      border-radius: 10px;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      letter-spacing: 1px;
+      box-shadow: none;
+      transition: background 0.18s, color 0.18s;
+    }
+    .btn-outline-agua:hover {
+      background: var(--agua) !important;
+      color: #fff !important;
+    }
+
+    /* Factura result */
+    #resultado {
+      display: none;
+    }
+    #resultado.visible {
       display: block;
-      margin: 10px 0;
     }
-    button {
-      margin-top: 10px;
-      margin-right: 10px;
+    .factura-card {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid var(--agua);
+      box-shadow: 0 4px 24px rgba(21,101,192,0.12);
     }
-    .result {
-      color: #000000;
-      margin-top: 5px;
-      padding: 5px;
-      border-radius: 5px;
-      width: 387px;
+    .factura-header {
+      background: linear-gradient(90deg, var(--agua-dark) 0%, var(--agua) 100%);
+      color: #fff;
+      padding: 16px 22px 12px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
-
-    table {
+    .factura-header .title {
+      font-family: 'Space Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+    .factura-header .date-badge {
+      background: rgba(255,255,255,0.18);
+      border-radius: 8px;
+      padding: 4px 14px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .factura-table {
       width: 100%;
-      border-collapse: collapse; 
-
-    th, td {
-      padding: 8px;
-      border-left: 1px solid #ccc; 
+      border-collapse: collapse;
     }
-
-    th:first-child,
-    td:first-child {
-      border-left: none;
+    .factura-table tr {
+      border-bottom: 1px solid #e3f0ff;
     }
-
-    tr:nth-child(odd) {
-      background-color: #ffffff;
+    .factura-table tr:last-child {
+      border-bottom: none;
     }
-    
-    tr:nth-child(even) {
-      background-color: #176ead;
-      color: white;
+    .factura-table td {
+      padding: 10px 18px;
+      font-size: 0.97rem;
     }
-
-
-    td:nth-child(2),
-    th:nth-child(2) {
+    .factura-table td:first-child {
+      color: var(--text-muted);
+      font-weight: 600;
+      width: 55%;
+    }
+    .factura-table td:last-child {
+      font-weight: 700;
+      color: var(--text-main);
       text-align: right;
+    }
+    .factura-total-row td {
+      background: var(--surface);
+      color: var(--agua-dark) !important;
+      font-size: 1.08rem !important;
+    }
+    .factura-footer {
+      background: #f0f7ff;
+      padding: 12px 20px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+    }
+    .cta-badge {
+      display: inline-block;
+      background: var(--agua-dark);
+      color: #fff;
+      border-radius: 8px;
+      padding: 3px 12px;
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      font-size: 0.92rem;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* History Table */
+    .history-table-wrap {
+      overflow-x: auto;
+      /* border-radius: 14px; */
+    }
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+    }
+    .history-table thead th {
+      background: linear-gradient(180deg, var(--agua) 0%, var(--accent) 100%);
+      color: #fff;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.78rem;
+      letter-spacing: 1px;
+      padding: 11px 14px;
+      white-space: nowrap;
+      border: none;
+      border-radius: 0px;
+      border-left: 2px solid rgb(255, 255, 255);
+      border-right: 2px solid rgb(255, 255, 255);
+    }
+    .history-table tbody tr {
+      transition: background 0.15s;
+    }
+    .history-table tbody tr:hover {
+      background: #e8f4ff;
+    }
+    .history-table tbody td {
+      padding: 10px 14px;
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+    .badge-pagado {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border-radius: 8px;
+      padding: 2px 10px;
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+    .badge-pendiente {
+      background: #fff3e0;
+      color: #e65100;
+      border-radius: 8px;
+      padding: 2px 10px;
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+    .btn-icon {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 8px;
+      padding: 4px 7px;
+      transition: background 0.15s, transform 0.12s;
+      display: inline-flex;
+      align-items: center;
+    }
+    .btn-icon:hover { transform: scale(1.18); }
+    .btn-icon.delete { color: var(--danger); }
+    .btn-icon.delete:hover { background: #fdecea; }
+    .btn-icon.edit { color: var(--agua); }
+    .btn-icon.edit:hover { background: #e3f0ff; }
+    .history-empty {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 28px 0;
+      font-size: 0.97rem;
+    }
+
+    /* Edit modal */
+    .modal .modal-header {
+      background: linear-gradient(90deg, var(--agua) 0%, var(--accent) 100%);
+      color: #fff;
+      padding: 18px 24px 12px 24px;
+      border-radius: 0;
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      font-size: 1rem;
+    }
+
+    /* Loader */
+    .loader-row td {
+      text-align: center;
+      padding: 22px 0;
+    }
+    .preloader-wrapper.small { width: 28px; height: 28px; }
+
+    /* Responsive tweaks */
+    @media (max-width: 600px) {
+      .card-modern .card-body { padding: 14px 10px; }
+      .factura-table td { padding: 8px 10px; font-size: 0.92rem; }
     }
   </style>
 </head>
 <body onload="cargarDatos()">
-  <h1>Factura de Agua</h1>
-    <label for="miSelect">Nombre del cliente:</label>
-    <select id="miSelect" onchange="searchClient(this.value)">
-      <option value="">Cargando opciones...</option>
-    </select>  
 
-  <label>Tarifa m3:
-    <input type="number" id="tarifa" value="30"/>
-  </label>
+  <!-- Header -->
+  <div class="app-header">
+    <div class="container">
+      <h4>
+        <i class="material-icons drop-icon">water_drop</i>
+        FACTURA DE AGUA
+      </h4>
+    </div>
+  </div>
 
-  <label>Fecha (día/mes/año):
-    <input type="date" id="fecha" value=""/>
-  </label>
+  <div class="container">
+    <div class="row">
 
-  <label>Lectura anterior:
-    <input type="number" id="lecturaAnterior" />
-  </label>
+      <!-- Form Card -->
+      <div class="col s12 m6">
+        <div class="card-modern">
+          <div class="card-title-bar">
+            <i class="material-icons" style="font-size:1.1rem">edit_note</i>
+            NUEVA FACTURA
+          </div>
+          <div class="card-body">
+            <div class="input-field">
+              <select id="miSelect" onchange="searchClient(this.value)">
+                <option value="">Cargando...</option>
+              </select>
+              <label>Cliente</label>
+            </div>
 
-  <label>Lectura actual:
-    <input type="number" id="lecturaActual" />
-  </label>
+            <div class="input-field">
+              <input type="number" id="tarifa" value="30" class="validate"/>
+              <label for="tarifa" class="active">Tarifa por m³ (L)</label>
+            </div>
 
-  <label>Saldo anterior:
-    <input type="number" id="saldoAnterior" value="0"/>
-  </label>
+            <div class="input-field">
+              <input type="date" id="fecha" class="validate"/>
+              <label for="fecha" class="active">Fecha</label>
+            </div>
 
-  <button onclick="calcular()">Calcular y mostrar factura</button>
-  <button onclick="generarImagen()">Generar Imagen PNG</button>
-  
+            <div class="row" style="margin-bottom:0">
+              <div class="input-field col s6">
+                <input type="number" id="lecturaAnterior" value="0" class="validate"/>
+                <label for="lecturaAnterior" class="active">Lectura anterior</label>
+              </div>
+              <div class="input-field col s6">
+                <input type="number" id="lecturaActual" value="0" class="validate"/>
+                <label for="lecturaActual" class="active">Lectura actual</label>
+              </div>
+            </div>
 
-  <div class="result" id="resultado"></div>
+            <div class="input-field">
+              <input type="number" id="saldoAnterior" value="0" class="validate"/>
+              <label for="saldoAnterior" class="active">Saldo anterior (L)</label>
+            </div>
 
-  <script src="controller.js"></script>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+              <button class="btn btn-agua waves-effect waves-light" onclick="calcular()">
+                <i class="material-icons left">receipt_long</i>
+                Calcular factura
+              </button>
+              <button class="btn btn-outline-agua waves-effect" onclick="generarImagen()" style="color:var(--agua)">
+                <i class="material-icons left">image</i>
+                Imagen PNG
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Factura Result -->
+      <div class="col s12 m6">
+        <div id="resultado">
+          <div class="factura-card">
+            <div class="factura-header">
+              <div>
+                <div class="title">FACTURA</div>
+                <div id="factura-cliente-name" style="font-size:0.93rem;margin-top:2px;opacity:0.85;"></div>
+              </div>
+              <div class="date-badge" id="factura-fecha-badge">—</div>
+            </div>
+            <table class="factura-table" id="factura-tabla-body">
+            </table>
+            <div class="factura-footer">
+              <div>Pagos únicamente vía depósito / transferencia bancaria</div>
+              <div class="cta-badge"># cta BAC: 746288631</div>
+              <div style="margin-top:6px;color:#2e7d32;font-weight:700;font-size:0.84rem;">
+                <i class="material-icons" style="font-size:0.95rem;vertical-align:middle;">verified</i>
+                Comprobante de depósito respalda el pago
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="resultado-placeholder" style="display:flex;align-items:center;justify-content:center;height:100%;min-height:180px;color:var(--text-muted);flex-direction:column;gap:8px;">
+          <i class="material-icons" style="font-size:3rem;opacity:0.25;">receipt_long</i>
+          <span style="font-size:0.97rem;">La factura aparecerá aquí</span>
+        </div>
+      </div>
+
+    </div><!-- /row -->
+
+    <!-- History Table Card -->
+    <div class="card-modern">
+      <div class="card-title-bar">
+        <i class="material-icons" style="font-size:1.1rem">history</i>
+        HISTORIAL DEL CLIENTE
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th style="border-left: 0px">Cliente</th>
+                <th>Fecha</th>
+                <th>Consumo (m³)</th>
+                <th>Saldo Anterior</th>
+                <th>Total a Pagar</th>
+                <th>Estado</th>
+                <th style="border-right: 0px">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="historialBody">
+              <tr>
+                <td colspan="7" class="history-empty">
+                  <i class="material-icons" style="font-size:2rem;opacity:0.3;display:block;margin:auto;">manage_search</i>
+                  Selecciona un cliente para ver su historial
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /container -->
+
+  <!-- Edit Modal -->
+  <div id="modalEditar" class="modal">
+    <div class="modal-header">
+      <i class="material-icons" style="vertical-align:middle;font-size:1.1rem;margin-right:8px;">edit</i>
+      EDITAR REGISTRO
+    </div>
+    <div class="modal-content" style="padding-top:14px;">
+      <input type="hidden" id="editId"/>
+      <div class="row">
+        <div class="input-field col s6">
+          <input type="date" id="editFecha" class="validate"/>
+          <label for="editFecha" class="active">Fecha</label>
+        </div>
+        <div class="input-field col s6">
+          <input type="number" id="editTarifa" value="30" class="validate"/>
+          <label for="editTarifa" class="active">Tarifa m³</label>
+        </div>
+        <div class="input-field col s6">
+          <input type="number" id="editLecturaAnterior" class="validate"/>
+          <label for="editLecturaAnterior" class="active">Lectura anterior</label>
+        </div>
+        <div class="input-field col s6">
+          <input type="number" id="editLecturaActual" class="validate"/>
+          <label for="editLecturaActual" class="active">Lectura actual</label>
+        </div>
+        <div class="input-field col s12">
+          <input type="number" id="editSaldoAnterior" class="validate"/>
+          <label for="editSaldoAnterior" class="active">Saldo anterior (L)</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="padding: 10px 24px 18px 24px; display:flex; gap:10px; justify-content:flex-end;">
+      <button class="btn-flat modal-close waves-effect" style="color:var(--text-muted);font-weight:700;">Cancelar</button>
+      <button class="btn btn-agua waves-effect waves-light" onclick="guardarEdicion()">
+        <i class="material-icons left">save</i>Guardar
+      </button>
+    </div>
+  </div>
+  <div id="modal-overlay" class="modal-overlay"></div>
+
+  <!-- Toast container -->
+  <div id="toast-area" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;"></div>
+
+  <!-- Materialize JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+  <script>
+    // ── SUPABASE ────────────────────────────────────────────────────────────────
+    const { createClient } = supabase;
+    const supabaseUrl = 'https://xrckiknyndtzrbjymlhx.supabase.co';
+    const supabaseKey = 'sb_publishable_YLTAQ36JVj8m7O2noMcdJg_oADlsbG7';
+    const _supabase = createClient(supabaseUrl, supabaseKey);
+
+    let facturaGlobal = {};
+    let clienteActualId = null;
+    let clienteActualNombre = '';
+
+    // ── INIT ────────────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      M.FormSelect.init(document.querySelectorAll('select'));
+      M.Modal.init(document.querySelectorAll('.modal'));
+    });
+
+    // ── TOAST ───────────────────────────────────────────────────────────────────
+    function toast(msg, type = 'info') {
+      const colors = { info: '#1565C0', success: '#43a047', error: '#e53935' };
+      const t = document.createElement('div');
+      t.style.cssText = `background:${colors[type]||colors.info};color:#fff;padding:11px 20px;border-radius:10px;font-family:Nunito,sans-serif;font-weight:700;font-size:0.95rem;box-shadow:0 4px 16px rgba(0,0,0,0.18);animation:fadeInUp .25s;`;
+      t.textContent = msg;
+      document.getElementById('toast-area').appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+
+    // ── CARGAR DATOS INICIALES ──────────────────────────────────────────────────
+    async function cargarDatos() {
+      const hoy = new Date().toISOString().split('T')[0];
+      document.getElementById('fecha').value = hoy;
+
+      let { data: clientes, error } = await _supabase.from('clientes').select('*').order('nombre');
+      if (error) { toast('Error cargando clientes: ' + error.message, 'error'); return; }
+
+      const select = document.getElementById('miSelect');
+      select.innerHTML = '<option value="" disabled selected>Selecciona un cliente</option>';
+      clientes.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = item.nombre;
+        select.appendChild(opt);
+      });
+      M.FormSelect.init(select);
+    }
+
+    // ── BUSCAR ÚLTIMO REGISTRO DEL CLIENTE ─────────────────────────────────────
+    async function searchClient(id_cliente) {
+      clienteActualId = id_cliente;
+      clienteActualNombre = document.getElementById('miSelect').options[document.getElementById('miSelect').selectedIndex].text;
+
+      let { data: factura } = await _supabase
+        .from('facturas').select('*')
+        .eq('cliente_id', id_cliente)
+        .order('fecha', { ascending: false })
+        .limit(1).single();
+
+      if (factura) {
+        document.getElementById('fecha').value = factura.fecha;
+        document.getElementById('lecturaAnterior').value = factura.lectura_anterior;
+        document.getElementById('lecturaActual').value = factura.lectura_actual;
+        document.getElementById('saldoAnterior').value = factura.saldo_anterior;
+      } else {
+        document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+        document.getElementById('lecturaAnterior').value = 0;
+        document.getElementById('lecturaActual').value = 0;
+        document.getElementById('saldoAnterior').value = 0;
+      }
+      M.updateTextFields();
+      cargarHistorial(id_cliente);
+    }
+
+    // ── CARGAR HISTORIAL ────────────────────────────────────────────────────────
+    async function cargarHistorial(id_cliente) {
+      const tbody = document.getElementById('historialBody');
+      tbody.innerHTML = `<tr class="loader-row"><td colspan="7"><div class="preloader-wrapper small active" style="display:inline-block;"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div></div></div></td></tr>`;
+
+      let { data: registros, error } = await _supabase
+        .from('facturas').select('*')
+        .eq('cliente_id', id_cliente)
+        .order('fecha', { ascending: false });
+
+      if (error || !registros || registros.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="history-empty"><i class="material-icons" style="font-size:2rem;opacity:0.3;display:block;margin:auto;">inbox</i>Sin registros para este cliente</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = '';
+      registros.forEach(r => {
+        const consumo = r.lectura_actual - r.lectura_anterior;
+        const pagado = r.total_pagar <= 0;
+        const fecha = new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-ES');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${clienteActualNombre}</strong></td>
+          <td>${fecha}</td>
+          <td><span style="font-family:'Space Mono',monospace;font-size:0.97rem;">${consumo}</span> m³</td>
+          <td>L ${parseFloat(r.saldo_anterior).toFixed(2)}</td>
+          <td><strong style="color:var(--agua-dark);">L ${parseFloat(r.total_pagar).toFixed(2)}</strong></td>
+          <td>${r.total_pagar > 0 ? '<span class="badge-pendiente">Pendiente</span>' : '<span class="badge-pagado">Pagado</span>'}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn-icon edit" onclick="abrirEditar(${JSON.stringify(r).replace(/"/g,'&quot;')})" title="Editar">
+              <i class="material-icons" style="font-size:1.1rem;">edit</i>
+            </button>
+            <button class="btn-icon delete" onclick="eliminarRegistro('${r.id}')" title="Eliminar">
+              <i class="material-icons" style="font-size:1.1rem;">delete_outline</i>
+            </button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // ── CALCULAR FACTURA ────────────────────────────────────────────────────────
+    function calcular() {
+      const select = document.getElementById('miSelect');
+      const idCliente = select.value;
+      if (!idCliente) { toast('Selecciona un cliente primero', 'error'); return; }
+
+      const cliente = select.options[select.selectedIndex].text;
+      const fecha = new Date(document.getElementById('fecha').value + 'T00:00:00');
+      const lecturaAnterior = parseFloat(document.getElementById('lecturaAnterior').value);
+      const lecturaActual = parseFloat(document.getElementById('lecturaActual').value);
+      const saldoAnterior = parseFloat(document.getElementById('saldoAnterior').value);
+      const tarifa = parseFloat(document.getElementById('tarifa').value);
+
+      const consumo = lecturaActual - lecturaAnterior;
+      const totalPagar = consumo * tarifa + saldoAnterior;
+      const fechaFormateada = fecha.toLocaleDateString('es-ES');
+      const ultimoDelMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).toLocaleDateString('es-ES');
+
+      facturaGlobal = { idCliente, cliente, fecha: fechaFormateada, lecturaAnterior, lecturaActual, consumo, saldoAnterior, totalPagar, fechaMaxPago: ultimoDelMes };
+
+      // Render factura
+      document.getElementById('factura-cliente-name').textContent = cliente;
+      document.getElementById('factura-fecha-badge').textContent = fechaFormateada;
+      document.getElementById('factura-tabla-body').innerHTML = `
+        <tr><td>Lectura anterior</td><td>${lecturaAnterior} m³</td></tr>
+        <tr><td>Lectura actual</td><td>${lecturaActual} m³</td></tr>
+        <tr><td>Consumo de agua</td><td>${consumo} m³</td></tr>
+        <tr><td>Saldo anterior</td><td>L ${saldoAnterior.toFixed(2)}</td></tr>
+        <tr class="factura-total-row"><td><strong>Total a pagar</strong></td><td><strong>L ${totalPagar.toFixed(2)}</strong></td></tr>
+        <tr><td>Fecha máxima de pago</td><td>${ultimoDelMes}</td></tr>
+      `;
+
+      document.getElementById('resultado').classList.add('visible');
+      document.getElementById('resultado-placeholder').style.display = 'none';
+
+      guardarNuevoRegistro(facturaGlobal);
+    }
+
+    // ── GUARDAR ─────────────────────────────────────────────────────────────────
+    async function guardarNuevoRegistro(f) {
+      const fecha = new Date(document.getElementById('fecha').value);
+      const fechaISO = fecha.toISOString().split('T')[0];
+      const fechaLimite = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).toISOString().split('T')[0];
+
+      const { error } = await _supabase.from('facturas').insert([{
+        cliente_id: f.idCliente,
+        fecha: fechaISO,
+        lectura_anterior: f.lecturaAnterior,
+        lectura_actual: f.lecturaActual,
+        saldo_anterior: f.saldoAnterior,
+        total_pagar: f.totalPagar,
+        fecha_limite_pago: fechaLimite
+      }]).select();
+
+      if (error) { toast('Error al guardar: ' + error.message, 'error'); }
+      else { toast('Factura guardada correctamente', 'success'); cargarHistorial(f.idCliente); }
+    }
+
+    // ── ELIMINAR ────────────────────────────────────────────────────────────────
+    async function eliminarRegistro(id) {
+      if (!confirm('¿Eliminar este registro?')) return;
+      const { error } = await _supabase.from('facturas').delete().eq('id', id);
+      if (error) { toast('Error al eliminar: ' + error.message, 'error'); }
+      else { toast('Registro eliminado', 'info'); cargarHistorial(clienteActualId); }
+    }
+
+    // ── EDITAR MODAL ────────────────────────────────────────────────────────────
+    function abrirEditar(r) {
+      document.getElementById('editId').value = r.id;
+      document.getElementById('editFecha').value = r.fecha;
+      document.getElementById('editLecturaAnterior').value = r.lectura_anterior;
+      document.getElementById('editLecturaActual').value = r.lectura_actual;
+      document.getElementById('editSaldoAnterior').value = r.saldo_anterior;
+      document.getElementById('editTarifa').value = 30;
+      M.updateTextFields();
+      const modal = M.Modal.getInstance(document.getElementById('modalEditar'));
+      modal.open();
+    }
+
+    async function guardarEdicion() {
+      const id = document.getElementById('editId').value;
+      const lecturaAnterior = parseFloat(document.getElementById('editLecturaAnterior').value);
+      const lecturaActual = parseFloat(document.getElementById('editLecturaActual').value);
+      const saldoAnterior = parseFloat(document.getElementById('editSaldoAnterior').value);
+      const tarifa = parseFloat(document.getElementById('editTarifa').value);
+      const fecha = document.getElementById('editFecha').value;
+      const totalPagar = (lecturaActual - lecturaAnterior) * tarifa + saldoAnterior;
+      const fechaObj = new Date(fecha);
+      const fechaLimite = new Date(fechaObj.getFullYear(), fechaObj.getMonth() + 1, 0).toISOString().split('T')[0];
+
+      const { error } = await _supabase.from('facturas').update({
+        fecha, lectura_anterior: lecturaAnterior, lectura_actual: lecturaActual,
+        saldo_anterior: saldoAnterior, total_pagar: totalPagar, fecha_limite_pago: fechaLimite
+      }).eq('id', id);
+
+      if (error) { toast('Error al actualizar: ' + error.message, 'error'); }
+      else {
+        toast('Registro actualizado', 'success');
+        M.Modal.getInstance(document.getElementById('modalEditar')).close();
+        cargarHistorial(clienteActualId);
+      }
+    }
+
+    // ── GENERAR IMAGEN ──────────────────────────────────────────────────────────
+    function generarImagen() {
+      const resultado = document.getElementById('resultado');
+      if (!resultado.classList.contains('visible')) { toast('Primero genera una factura', 'error'); return; }
+      html2canvas(resultado).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `factura_${facturaGlobal.cliente.replace(/\s/g, '_')}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    }
+  </script>
+
+  <style>
+    @keyframes fadeInUp {
+      from { opacity:0; transform:translateY(16px); }
+      to { opacity:1; transform:translateY(0); }
+    }
+  </style>
 </body>
 </html>
